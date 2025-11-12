@@ -1,20 +1,26 @@
 package main
 
 import (
+	"github.com/cryptidcodes/chirpy/internal/database"
 	"net/http"
 	"encoding/json"
 	"log"
 	"strings"
+	"github.com/google/uuid"
 )
 
-func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
+	// CONFIG
+	// specify request and response structures
 	type parameters struct {
 		Body string `json:"body"`
+		UserID uuid.UUID `json:"user_id"`
 	}
 	type returnVals struct {
 		Cleaned_Body string `json:"cleaned_body"`
 	}
 
+	// HANDLE JSON REQUEST
 	// decode the incoming JSON body into a parameters struct
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
@@ -26,7 +32,7 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	// params is now a struct with data populated successfully
 
-
+	// VALIDATE AND PROCESS
 	// validate the body length
 	const maxChirpLength = 140
 	if len(params.Body) > maxChirpLength {
@@ -48,6 +54,17 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	cleaned := strings.Join(cleanedWords, " ")
 
+	// CREATE SQL ENTRY
+	chirpParams := database.CreateChirpParams{
+		Body: cleaned,
+		UserID: uuid.NullUUID{
+			UUID:  params.UserID,
+			Valid: true,
+		},
+	}
+	cfg.dbQueries.CreateChirp(r.Context(), chirpParams)
+
+	// RESPOND WITH CLEANED CHIRP
 	respondWithJSON(w, http.StatusOK, returnVals{
 		Cleaned_Body: cleaned,
 	})
