@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"github.com/google/uuid"
+	"time"
 )
 
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +18,11 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		UserID uuid.UUID `json:"user_id"`
 	}
 	type returnVals struct {
-		Cleaned_Body string `json:"cleaned_body"`
+		ID uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Body string `json:"body"`
+		UserID uuid.NullUUID `json:"user_id"`
 	}
 
 	// HANDLE JSON REQUEST
@@ -62,10 +67,22 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 			Valid: true,
 		},
 	}
-	cfg.dbQueries.CreateChirp(r.Context(), chirpParams)
+	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), chirpParams)
+	if err != nil {
+		log.Printf("Error creating chirp in database: %s", err)
+		respondWithError(w, http.StatusInternalServerError, "Couldn't create chirp", err)
+		return
+	}
+
+	// DEBUG
+	println("Created chirp: ", chirp.Body)
 
 	// RESPOND WITH CLEANED CHIRP
-	respondWithJSON(w, http.StatusOK, returnVals{
-		Cleaned_Body: cleaned,
+	respondWithJSON(w, http.StatusCreated, returnVals{
+		ID: chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body: chirp.Body,
+		UserID: chirp.UserID,
 	})
 }
