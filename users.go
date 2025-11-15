@@ -1,18 +1,18 @@
 package main
 
 import (
-	"github.com/google/uuid"
-	"time"
 	"net/http"
 	"encoding/json"
+	"time"
+	"github.com/google/uuid"
 )
 
 type User struct {
-		ID uuid.UUID `json:"id"`
-		Created_at time.Time `json:"created_at"`
-		Updated_at time.Time `json:"updated_at"`
-		Email string `json:"email"`
-	}	
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string `json:"email"`
+}
 
 func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 	// define request and response structures for this endpoint
@@ -44,8 +44,8 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, 201, response{
 		User: User{
 			ID: newUser.ID,
-			Created_at: newUser.CreatedAt,
-			Updated_at: newUser.UpdatedAt,
+			CreatedAt: newUser.CreatedAt,
+			UpdatedAt: newUser.UpdatedAt,
 			Email: newUser.Email,
 		},
 	})
