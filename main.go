@@ -54,12 +54,16 @@ func main() {
 	fsHandler := cfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
 	mux.Handle("/app/", fsHandler)
 
-	// additional endpoint handlers
-	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-	mux.HandleFunc("POST /api/chirps", cfg.handlerCreateChirp)
+	// API endpoint handlers
 	mux.HandleFunc("POST /api/users", cfg.handlerCreateUser)
+	mux.HandleFunc("POST /api/login", cfg.handlerLoginUser)
+
+	mux.HandleFunc("POST /api/chirps", cfg.handlerCreateChirp)
 	mux.HandleFunc("GET /api/chirps", cfg.handlerGetAllChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.handlerGetChirpByID)
+	
+	// additional endpoint handlers
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 
 	// admin endpoint handlers
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)

@@ -31,5 +31,5 @@ go.work.sum
 # .idea/
 # .vscode/
 
-# text files
-/sql/schema/connection_string.txt
+# tests
+/tests/
