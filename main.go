@@ -1,21 +1,24 @@
 package main
-import _ "github.com/lib/pq"
+
 import (
-	"github.com/cryptidcodes/chirpy/internal/database"
-	"sync/atomic"
+	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
-	"database/sql"
-	"log"
+	"sync/atomic"
+
+	"github.com/cryptidcodes/chirpy/internal/database"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
-		fileserverHits atomic.Int32
-		dbQueries *database.Queries
-		platform string
-	}
+	fileserverHits atomic.Int32
+	dbQueries      *database.Queries
+	platform       string
+	secretKey      string
+}
 
 func main() {
 	const filepathRoot = "."
@@ -31,10 +34,14 @@ func main() {
 	if platform == "" {
 		log.Fatal("PLATFORM must be set")
 	}
+	secretKey := os.Getenv("SECRET_KEY")
+	if secretKey == "" {
+		log.Fatal("SECRET_KEY must be set")
+	}
 
 	// connect to the database
 	db, err := sql.Open("postgres", dbURL)
-	if err != nil{
+	if err != nil {
 		log.Fatal("Error connecting to the database: ", err)
 	}
 
@@ -43,8 +50,9 @@ func main() {
 	// init config struct
 	cfg := apiConfig{
 		fileserverHits: atomic.Int32{},
-		dbQueries: dbQueries,
-		platform: platform,
+		dbQueries:      dbQueries,
+		platform:       platform,
+		secretKey:      secretKey,
 	}
 
 	// create a new http.ServeMux to handle requests
@@ -61,17 +69,17 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", cfg.handlerCreateChirp)
 	mux.HandleFunc("GET /api/chirps", cfg.handlerGetAllChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.handlerGetChirpByID)
-	
+
 	// additional endpoint handlers
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 
 	// admin endpoint handlers
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
-	
+
 	// create a new http.Server struct
 	server := &http.Server{
-		Addr:	":" + port,
+		Addr:    ":" + port,
 		Handler: mux,
 	}
 

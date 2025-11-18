@@ -1,34 +1,52 @@
 package main
 
 import (
-	"net/http"
 	"encoding/json"
 	"log"
+	"net/http"
 	"strings"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/cryptidcodes/chirpy/internal/auth"
 	"github.com/cryptidcodes/chirpy/internal/database"
+	"github.com/google/uuid"
 )
 
 type Chirp struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Body      string `json:"body"`
+	Body      string    `json:"body"`
 	UserID    uuid.UUID `json:"user_id"`
 }
 
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	// specify request and response structures
 	type parameters struct {
-		Body string `json:"body"`
+		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
+	}
+
+	// validate JWT from headers
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Missing or invalid token", err)
+		return
+	}
+	if token == "" {
+		respondWithError(w, http.StatusUnauthorized, "Missing or invalid token", nil)
+		return
+	}
+	UserID, err := auth.ValidateJWT(token, cfg.secretKey)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
+		return
 	}
 
 	// decode the incoming JSON body into a parameters struct
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding parameters: %s", err)
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
@@ -59,8 +77,8 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 
 	// CREATE SQL ENTRY
 	chirpParams := database.CreateChirpParams{
-		Body: cleaned,
-		UserID: params.UserID,
+		Body:   cleaned,
+		UserID: UserID,
 	}
 
 	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), chirpParams)
@@ -72,11 +90,11 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 
 	// RESPOND WITH CLEANED CHIRP
 	respondWithJSON(w, http.StatusCreated, Chirp{
-		ID: chirp.ID,
+		ID:        chirp.ID,
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
-		Body: chirp.Body,
-		UserID: chirp.UserID,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
 	})
 }
 
@@ -93,14 +111,13 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 	// parse chirps into response format
 	for i := range chirps {
 		resp[i] = Chirp{
-			ID: chirps[i].ID,
+			ID:        chirps[i].ID,
 			CreatedAt: chirps[i].CreatedAt,
 			UpdatedAt: chirps[i].UpdatedAt,
-			Body: chirps[i].Body,
-			UserID: chirps[i].UserID,
+			Body:      chirps[i].Body,
+			UserID:    chirps[i].UserID,
 		}
 	}
-
 
 	// respond with JSON
 	respondWithJSON(w, http.StatusOK, resp)
@@ -114,7 +131,7 @@ func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request
 		respondWithError(w, http.StatusBadRequest, "Invalid chirp ID", err)
 		return
 	}
-	
+
 	c, err := cfg.dbQueries.GetChirpByID(r.Context(), ID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Couldn't retrieve chirp", err)
@@ -123,10 +140,10 @@ func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request
 
 	// respond with JSON
 	respondWithJSON(w, http.StatusOK, Chirp{
-		ID: c.ID,
+		ID:        c.ID,
 		CreatedAt: c.CreatedAt,
 		UpdatedAt: c.UpdatedAt,
-		Body: c.Body,
-		UserID: c.UserID,
+		Body:      c.Body,
+		UserID:    c.UserID,
 	})
 }
