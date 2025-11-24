@@ -18,6 +18,7 @@ type apiConfig struct {
 	dbQueries      *database.Queries
 	platform       string
 	secretKey      string
+	polkaKey       string
 }
 
 func main() {
@@ -38,6 +39,10 @@ func main() {
 	if secretKey == "" {
 		log.Fatal("SECRET_KEY must be set")
 	}
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("POLKA_KEY must be set")
+	}
 
 	// connect to the database
 	db, err := sql.Open("postgres", dbURL)
@@ -53,6 +58,7 @@ func main() {
 		dbQueries:      dbQueries,
 		platform:       platform,
 		secretKey:      secretKey,
+		polkaKey:       polkaKey,
 	}
 
 	// create a new http.ServeMux to handle requests
@@ -76,6 +82,9 @@ func main() {
 
 	// additional endpoint handlers
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+
+	// webhook endpoint handlers
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.handlerUpgradeToChirpyRed)
 
 	// admin endpoint handlers
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)

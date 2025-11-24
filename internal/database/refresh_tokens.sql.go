@@ -13,7 +13,7 @@ import (
 )
 
 const getUserByRefreshToken = `-- name: GetUserByRefreshToken :one
-SELECT u.id, u.created_at, u.updated_at, u.email, u.hashed_password
+SELECT u.id, u.created_at, u.updated_at, u.email, u.hashed_password, u.is_chirpy_red
 FROM users u
 JOIN refresh_tokens rt ON u.id = rt.user_id
 WHERE rt.token = $1
@@ -30,6 +30,7 @@ func (q *Queries) GetUserByRefreshToken(ctx context.Context, token string) (User
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }

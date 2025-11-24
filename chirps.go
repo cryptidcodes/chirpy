@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// DO NOT DELETE: USED IN RESPONSE STRUCTURES
+// database.Chirps DOES NOT HAVE JSON TAGS
 type Chirp struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
