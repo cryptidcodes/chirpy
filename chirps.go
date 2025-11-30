@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -103,6 +104,45 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
 	// returns all chirps in the db
 
+	// check query params
+	q := r.URL.Query()
+	author_ID := q.Get("author_id")
+	sortOrder := q.Get("sort")
+	if author_ID != "" {
+		userID, err := uuid.Parse(author_ID)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "couldn't parse userID", err)
+			return
+		}
+
+		chirps, err := cfg.dbQueries.GetAllChirpsByUser(r.Context(), userID)
+		if err != nil {
+			respondWithError(w, http.StatusNotFound, "couldnt get user's chirps", err)
+			return
+		}
+
+		resp := make([]Chirp, len(chirps))
+		// parse chirps into response format
+		for i := range chirps {
+			resp[i] = Chirp{
+				ID:        chirps[i].ID,
+				CreatedAt: chirps[i].CreatedAt,
+				UpdatedAt: chirps[i].UpdatedAt,
+				Body:      chirps[i].Body,
+				UserID:    chirps[i].UserID,
+			}
+		}
+
+		// sort if needed
+		if sortOrder == "desc" {
+			// simple bubble sort for descending order by CreatedAt
+			sort.Slice(resp, func(i, j int) bool { return resp[i].CreatedAt.After(resp[j].CreatedAt) })
+		}
+
+		respondWithJSON(w, http.StatusOK, resp)
+		return
+	}
+
 	chirps, err := cfg.dbQueries.GetAllChirps(r.Context())
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve chirps", err)
@@ -119,6 +159,11 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 			Body:      chirps[i].Body,
 			UserID:    chirps[i].UserID,
 		}
+	}
+	// sort if needed
+	if sortOrder == "desc" {
+		// simple bubble sort for descending order by CreatedAt
+		sort.Slice(resp, func(i, j int) bool { return resp[i].CreatedAt.After(resp[j].CreatedAt) })
 	}
 
 	// respond with JSON
