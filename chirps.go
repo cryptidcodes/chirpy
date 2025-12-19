@@ -160,6 +160,7 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 			UserID:    chirps[i].UserID,
 		}
 	}
+
 	// sort if needed
 	if sortOrder == "desc" {
 		// simple bubble sort for descending order by CreatedAt
